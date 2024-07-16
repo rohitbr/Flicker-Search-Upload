@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 class FlickerSearchListViewModel : ObservableObject {
     
@@ -32,43 +33,55 @@ class FlickerSearchListViewModel : ObservableObject {
         case noResults
         case error(String)
     }
-     
+    
     @Published var debouncedText = ""
     @Published var searchText = ""
     @Published var photoArray : [Image] = []
     @Published var state : State = .noQuery
-
+    private var cancellables: Set<AnyCancellable> = []
+    
     private let networkManager: NetworkManager
-   
+    
     var pageNumber: Int = 1
     var needMoreData = false
     
-        
+    
     init(networkManager: NetworkManager) {
         self.networkManager = networkManager
         
-        let debounced = $searchText.debounce(for: .seconds(1), scheduler: RunLoop.main).values
-
-        Task {
-            for await value in debounced {
+        let debounced = $searchText.debounce(for: .seconds(1), scheduler: RunLoop.main).eraseToAnyPublisher()
+        
+        debounced
+            .sink { [weak self] value in
+                self?.handleDebouncedValue(value)
                 print("value is \(value)")
-                await MainActor.run {
-                    debouncedText = value
-                    resetState()
-                    
-                    if debouncedText.isEmpty {
-                        state = .noQuery
-                        return
-                    }
-                }
-                if !debouncedText.isEmpty {
-                    await fetchImages()
-                }
             }
+            .store(in: &cancellables)
+    }
+    
+    private func handleDebouncedValue(_ value: String) {
+        Task {
+            await self.updateState(with: value)
         }
     }
     
-    func resetState()  {
+    private func updateState(with value: String) async {
+        await MainActor.run {
+            self.debouncedText = value
+            self.resetState()
+            
+            if self.debouncedText.isEmpty {
+                self.state = .noQuery
+                return
+            }
+        }
+        
+        if !self.debouncedText.isEmpty {
+            await self.fetchImages()
+        }
+    }
+    
+    func resetState() {
         Task {
             await MainActor.run {
                 pageNumber = 1
@@ -111,7 +124,7 @@ class FlickerSearchListViewModel : ObservableObject {
         
         return image
     }
-
+    
     func fetchImages() async {
         guard !debouncedText.isEmpty else {
             return
@@ -125,7 +138,7 @@ class FlickerSearchListViewModel : ObservableObject {
             state = .firstQueryLoading
         }
         
-
+        
         let searchUrl = initializeUrl(pageNumber: self.pageNumber)
         let data = await networkManager.getData(url: searchUrl)
         
@@ -168,7 +181,7 @@ class FlickerSearchListViewModel : ObservableObject {
                         }
                     }
                     print("Done with the for loop here \(pageNumber)")
-
+                    
                     
                     await MainActor.run {
                         if photosArray.isEmpty {
