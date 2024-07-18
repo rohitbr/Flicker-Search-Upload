@@ -22,9 +22,15 @@ final class FlickerSearchListViewModelTests: XCTestCase {
         vm = nil
     }
     
-    func testResetState() {
-        vm?.resetState()
+    func testResetState() async {
+        await vm?.resetState()
         XCTAssertEqual(vm?.pageNumber, 1)
         XCTAssertEqual(vm?.photoArray, [])
+    }
+    
+    func testUpdateState() async {
+        await vm?.updateState(with: "Cat")
+        
+        
     }
 }

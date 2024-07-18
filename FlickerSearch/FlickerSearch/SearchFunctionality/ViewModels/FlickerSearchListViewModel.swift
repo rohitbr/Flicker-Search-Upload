@@ -68,25 +68,25 @@ class FlickerSearchListViewModel : ObservableObject {
     private func updateState(with value: String) async {
         await MainActor.run {
             self.debouncedText = value
-            self.resetState()
-            
-            if self.debouncedText.isEmpty {
+        }
+        await resetState()
+        
+        if debouncedText.isEmpty {
+            await MainActor.run {
                 self.state = .noQuery
-                return
             }
+            return
         }
         
         if !self.debouncedText.isEmpty {
-            await self.fetchImages()
+            await fetchImages()
         }
     }
     
-    func resetState() {
-        Task {
-            await MainActor.run {
-                pageNumber = 1
-                photoArray = []
-            }
+    func resetState() async {
+        await MainActor.run {
+            pageNumber = 1
+            photoArray = []
         }
     }
     
@@ -198,13 +198,16 @@ class FlickerSearchListViewModel : ObservableObject {
             } catch {
                 await MainActor.run {
                     state = .error(CustomError.downloadError.error())
-                    resetState()
                 }
+                await resetState()
+                
                 print("downloading failed")
             }
         } catch {
-            state = .error(CustomError.decodingError.error())
-            resetState()
+            await MainActor.run {
+                state = .error(CustomError.decodingError.error())
+            }
+            await resetState()
             print("decoding failed")
         }
     }
