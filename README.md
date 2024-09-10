@@ -12,7 +12,7 @@ The purpose of this SwiftUI project is to give the user the ability to do the fo
 7. User can see the popular keyword searches in the Home page. Clicking on it will automatically search images. 
 8. The images scrolling supports lazy loading of images and paging. 
 9. If images are not found error message is shown.
-10. In the Second tab, the user can upload messages.
+10. In the Second tab, the user can upload image from Camera roll.
 11. User can select image from Camera roll and upload the same image to his/her Flickr account.
 12. After successful upload a success animation is shown.
 
